@@ -31,9 +31,15 @@ const Employee = sequelize.define('Employee', {
       isEmail: true,
     },
   },
-  Role: {
-    type: DataTypes.STRING(50),  // Adjusted length to varchar(50)
+  RoleID: {
+    type: DataTypes.INTEGER,  // Foreign key column for RoleID
     allowNull: true,
+    references: {
+      model: 'userrole',  // The table name where RoleID is stored
+      key: 'RoleID',      // The primary key of the 'userrole' table
+    },
+    onDelete: 'SET NULL',  // Optional: defines what happens when a referenced role is deleted
+    onUpdate: 'CASCADE',   // Optional: if RoleID in userrole is updated, it will cascade
   },
   DateOfJoining: {
     type: DataTypes.DATEONLY,  // Use DATEONLY for a date without time (matching 'date' type)
@@ -43,5 +49,13 @@ const Employee = sequelize.define('Employee', {
   tableName: 'Employee',  // This will define the table name in MySQL
   timestamps: false,      // Timestamps not needed as they were not included in your schema
 });
+
+// Association to the userrole table (optional if you need to query the Role data)
+Employee.associate = (models) => {
+  Employee.belongsTo(models.UserRole, {
+    foreignKey: 'RoleID',
+    as: 'role',  // Alias to access the associated Role data
+  });
+};
 
 module.exports = Employee;
