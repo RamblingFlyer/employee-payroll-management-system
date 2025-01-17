@@ -169,7 +169,7 @@ exports.getEvaluationsByEvaluator = async (req, res) => {
     }
 };
 
-exports.getEmployeDetails = async (req, res) => {
+exports.getEmployeeDetails = async (req, res) => {
     const { employeeID } = req.params;  // Extract employeeId from request params
     try {
         // Fetch performance stats for the employee
@@ -214,7 +214,7 @@ exports.getEmployeDetails = async (req, res) => {
 };
 
 
-exports.getEmployeSalary = async (req, res) => {
+exports.getEmployeeSalary = async (req, res) => {
     const { employeeID } = req.params;
   
     try {
@@ -297,7 +297,7 @@ exports.addSalary = async (req, res) => {
     }
   };
   
-exports.getSlaryRecords = async (req, res) => {
+exports.getSalaryRecords = async (req, res) => {
     const { employeeID } = req.params;
     
     try {
@@ -317,7 +317,7 @@ exports.getSlaryRecords = async (req, res) => {
   };
   
 
-exports.getPerformancStats = async (req, res) => {
+exports.getPerformanceStats = async (req, res) => {
     const employeeID = req.params.employeeID;
 
     try {

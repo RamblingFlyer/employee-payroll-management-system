@@ -3,7 +3,7 @@ const PerformanceStats = require('../models/PerformanceStats');
 const CurrentSalaries = require('../models/CurrentSalary')
 const Salary = require('../models/Salary')
 const bcrypt = require('bcrypt');
-const Authentication = require('../models/Authentication');
+//const Authentication = require('../models/Authentication');
 // controllers/empController.js
 // Insert User Function
 const jwt = require('jsonwebtoken');
