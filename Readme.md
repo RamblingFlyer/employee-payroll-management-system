@@ -1,5 +1,8 @@
 # Frontend
 - login
+## Functionality
+- post employees, get employees
+- 
 # Backend
 ## db design
 To design the database for your ER diagram, we’ll follow a structured approach:
@@ -175,6 +178,57 @@ JOIN
 ```
 This schema captures all the entities and relationships from your ER diagram and is designed to ensure data integrity, scalability, and usability. Let me know if you want additional features like triggers or stored procedures!
 
+new updates
+```sql
+CREATE TABLE current_salary (
+  EmployeeID INT NOT NULL,
+  SalaryID INT NOT NULL,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (EmployeeID, SalaryID),
+  FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (SalaryID) REFERENCES Salary(SalaryID) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+```
+haha
+```sql
+INSERT INTO salary (EmployeeID, BasicPay, Allowances, Deductions, Bonuses, Date) VALUES (6, 500000, 2000, 1000, 1500, '2025-01-01');
+```
+
+```sql
+ALTER TABLE Employee
+ADD COLUMN RoleID INT;
+```
+
+```mysql
+ALTER TABLE Employee
+ADD CONSTRAINT fk_roleid
+FOREIGN KEY (RoleID)
+REFERENCES userrole (RoleID)
+ON DELETE SET NULL;  -- Optional, based on your preference for handling deletions in the referenced table
+```
+authentication table
+```sql
+CREATE TABLE authentications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  employeeId INT NOT NULL,
+  FOREIGN KEY (employeeId) REFERENCES employee(employeeID)
+);
+```
+
+adding supervisorID
+```sql
+ALTER TABLE Employee
+ADD COLUMN SupervisorID INT NULL;
+ALTER TABLE Employee
+ADD CONSTRAINT FK_Supervisor
+FOREIGN KEY (SupervisorID) REFERENCES Employee(EmployeeID)
+ON DELETE SET NULL ON UPDATE CASCADE;
+
+```
+
 
 ## DB testing
 root login
@@ -185,6 +239,8 @@ mysql -u root -p
 show databases;
 #using db
 USE EmployeeManagement;
+#showing database
+
 ```
 
 ## setting up backend
@@ -204,5 +260,46 @@ setup according to directory structure
 "DateOfJoining": "2022-03-01"
 }
 ```
+- sql commands
+```sql
+#describe
+SELECT * FROM AssignedRole;
+#insert role
+INSERT INTO AssignedRole (EmployeeID, RoleID) VALUES (1, 1);
+#get rolemame of the employee give employeeid
+SELECT ur.RoleName FROM AssignedRole erm JOIN UserRole ur ON erm.RoleID = ur.RoleID WHERE erm.EmployeeID = 2;
+```
+- GET `http://localhost:3001/api/employees/`
+to get all employees
+- GET `http://localhost:3001/api/employees/id`
+replace id with emp id like
+`http://localhost:3001/api/employees/2`
 
+- POST `http://localhost:3001/api/employees/2/evaluations`
+```json
+{
+"employeeId": 7,
+"grade": "A",
+"evaluationDate": "2024-01-13",
+"comments": "Excellent performance in all areas"
+}
+```
+- GET `http://localhost:3001/api/employees/2/evaluations`
+- GET `http://localhost:3001/api/employees/6/performance`
+- GET `http://localhost:3001/api/employees/6/salary`
+```json
+{ "employeeID": 6, "grade": "A", "evaluationDate": "2025-01-17", "comments": "Excellent performance throughout the year." }
+```
 
+```json
+{
+  "EmployeeID": 1,
+  "BasicPay": 50000.00,
+  "Allowances": 5000.00,
+  "Deductions": 2000.00,
+  "Bonuses": 3000.00,
+  "NetSalary": 56000.00,
+  "Date": "2025-01-18T00:00:00Z"
+}
+
+```
