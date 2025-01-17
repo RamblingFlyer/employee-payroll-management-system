@@ -1,6 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-
+const Authentication = require('./authentication');
 const Employee = sequelize.define('Employee', {
   EmployeeID: {
     type: DataTypes.INTEGER,
@@ -45,6 +45,16 @@ const Employee = sequelize.define('Employee', {
     type: DataTypes.DATEONLY,  // Use DATEONLY for a date without time (matching 'date' type)
     allowNull: true,           // Allow NULL as per the table definition
   },
+  SupervisorID: {
+    type: DataTypes.INTEGER, // Self-referencing foreign key
+    allowNull: true,         // SupervisorID can be null if no supervisor exists
+    references: {
+      model: 'Employee',     // References the same table
+      key: 'EmployeeID',     // Points to the primary key in Employee
+    },
+    onDelete: 'SET NULL',    // If the supervisor is deleted, set SupervisorID to NULL
+    onUpdate: 'CASCADE',     // If the EmployeeID of the supervisor is updated, update all references
+  },
 }, {
   tableName: 'Employee',  // This will define the table name in MySQL
   timestamps: false,      // Timestamps not needed as they were not included in your schema
@@ -58,4 +68,24 @@ Employee.associate = (models) => {
   });
 };
 
+Employee.belongsTo(Employee, {
+  as: 'Supervisor',        // Alias for supervisor association
+  foreignKey: 'SupervisorID',
+  onDelete: 'SET NULL',    // When a supervisor is deleted, set SupervisorID to NULL
+  onUpdate: 'CASCADE',     // Update SupervisorID when EmployeeID is updated
+});
+
+Employee.hasMany(Employee, {
+  as: 'Subordinates',      // Alias for subordinates association
+  foreignKey: 'SupervisorID',
+});
+
+Employee.hasOne(Authentication, {
+  foreignKey: 'employeeId',
+  onDelete: 'CASCADE', // Delete authentication entry if the employee is deleted
+});
+
+Authentication.belongsTo(Employee, {
+  foreignKey: 'employeeId',
+});
 module.exports = Employee;

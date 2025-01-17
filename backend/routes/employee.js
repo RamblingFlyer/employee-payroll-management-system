@@ -1,22 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const EmpController = require('../controllers/empController');
-
-//employee
-router.post('/add',EmpController.addEmployee);
-router.get('/', EmpController.getAllEmployees);
+const EmpController = require('../controllers/employeeController');
 
 //evaluations
-router.get('/:id', EmpController.getEmployeeById);
-router.get('/:employeeId/performance', EmpController.getPerformanceStats);
-router.get('/:evaluatorId/evaluations',EmpController.getEvaluationsByEvaluator)
-router.post('/:evaluatorId/evaluations', EmpController.addEvaluation);
+router.get('/mydetails', EmpController.getEmployeeById);
+//router.get('/myperformance', EmpController.getPerformanceStats);
 
 //getall,get single, post salary records
-router.get('/:employeeID/salary', EmpController.getSalaryRecords);
-router.post('/:employeeID/salary', EmpController.addSalary);
-router.get('/salary/:employeeID', EmpController.getEmployeeSalary);
+router.get('/mypayrollhistory', EmpController.getSalaryRecords);
+router.get('/mysalary', EmpController.getEmployeeSalary);
 
 //getdetails
-router.get('/:employeeID/stats',EmpController.getEmployeeDetails);
+router.get('/mystats',EmpController.getEmployeeDetails);
 module.exports = router;

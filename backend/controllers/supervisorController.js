@@ -2,24 +2,41 @@ const Employee = require('../models/Employee');
 const PerformanceStats = require('../models/PerformanceStats');
 const CurrentSalaries = require('../models/CurrentSalary')
 const Salary = require('../models/Salary')
+const bcrypt = require('bcrypt');
+const Authentication = require('../models/Authentication');
 // controllers/empController.js
+// Insert User Function
+const jwt = require('jsonwebtoken');
+// Secret key for signing the JWT (store securely, e.g., in environment variables)
+
 exports.addEvaluation = async (req, res) => {
-    const { employeeId, grade, evaluationDate, comments } = req.body;
-    const evaluatorId = req.params.evaluatorId;  // The evaluator submitting the evaluation
+    const { employeeID, grade, evaluationDate, comments } = req.body;
+    const { employeeId } = req.user;  // The evaluator submitting the evaluation
 
     // Validate the required fields
-    if (!employeeId || !grade || !evaluationDate || !evaluatorId) {
+    if (!employeeID || !grade || !evaluationDate || !employeeId) {
         return res.status(400).json({ error: 'Missing required fields. Please provide employeeId, grade, evaluationDate, and evaluatorId.' });
     }
 
     try {
+        const employee = await Employee.findOne({
+            where: { EmployeeID: employeeID, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+            attributes: ['EmployeeID', 'Name', 'SupervisorID']
+        });
+
+        // If no such employee exists, deny access
+        if (!employee) {
+            return res.status(403).json({
+                error: 'You are not authorized to evaluate this employee. Only supervisors can evaluate their employees.'
+            });
+        }
         // Create a new evaluation record in the PerformanceStats table
         const newEvaluation = await PerformanceStats.create({
             EmployeeID: employeeId,
             Grade: grade,
             EvaluationDate: evaluationDate,
             Comments: comments,
-            EvaluatorID: evaluatorId
+            EvaluatorID: employeeId
         });
 
         // Return the newly created evaluation as a response
@@ -39,15 +56,14 @@ exports.addEvaluation = async (req, res) => {
         return res.status(500).json({ error: 'Database error', details: err.message });
     }
 };
-
 exports.getEvaluationsByEvaluator = async (req, res) => {
-    const evaluatorId = req.params.evaluatorId;
+    const { employeeId } = req.user;
 
     try {
         // Fetch all performance stats where the evaluator is the given EvaluatorID
         const evaluations = await PerformanceStats.findAll({
             where: {
-                EvaluatorID: evaluatorId  // Find records where EvaluatorID matches the given evaluator
+                EvaluatorID: employeeId  // Find records where EvaluatorID matches the given evaluator
             },
             include: [
                 {
@@ -75,10 +91,80 @@ exports.getEvaluationsByEvaluator = async (req, res) => {
         return res.status(500).json({ error: 'Database error', details: err.message });
     }
 };
+exports.getmyemployeedetails = async (req, res) => {
+    const { employeeId }= req.user;  // Extract employeeId from request params
+    try {
+        // Fetch all employees who report to the supervisor (SupervisorID matches the given ID)
+        const employees = await Employee.findAll({
+            where: { SupervisorID: employeeId },  // Fetch records for employees under the supervisor
+            attributes: ['EmployeeID', 'Name', 'Department'], // Include relevant employee details
+        });
+
+        // If no employees are found, return a 404 error
+        if (employees.length === 0) {
+            return res.status(404).json({ message: 'No employees found under this supervisor' });
+        }
+
+        // Initialize an array to hold performance stats and salary records for each employee
+        const employeeDetailsPromises = employees.map(async (employee) => {
+            // Fetch performance stats for the current employee
+            const performanceStats = await PerformanceStats.findAll({
+                where: { EmployeeID: employee.EmployeeID },  // Fetch records for the current employee
+                include: [
+                    {
+                        model: Employee,
+                        as: 'Employee',
+                        attributes: ['EmployeeID', 'Name']
+                    },
+                    {
+                        model: Employee,
+                        as: 'Evaluator',
+                        attributes: ['EmployeeID', 'Name']
+                    }
+                ]
+            });
+
+            // Fetch all salary records associated with the current employee
+            const salaryRecords = await Salary.findAll({
+                where: { EmployeeID: employee.EmployeeID }
+            });
+
+            return {
+                employee: employee,
+                performanceStats: performanceStats,
+                salaryRecords: salaryRecords
+            };
+        });
+
+        // Resolve all employee details (performance stats and salary records)
+        const employeeDetails = await Promise.all(employeeDetailsPromises);
+
+        // Return the employee details
+        return res.status(200).json({
+            employees: employeeDetails
+        });
+
+    } catch (err) {
+        console.error('Error retrieving employees under supervisor:', err.message);
+        return res.status(500).json({ error: 'Database error', details: err.message });
+    }
+};
 
 exports.getEmployeeDetails = async (req, res) => {
-    const { employeeID } = req.params;  // Extract employeeId from request params
+    const { employeeID } = req.params;
+    const { employeeId } = req.user;  // Extract employeeId from request params
     try {
+        const employee = await Employee.findOne({
+            where: { EmployeeID: employeeID, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+            attributes: ['EmployeeID', 'Name', 'SupervisorID']
+        });
+
+        // If no such employee exists, deny access
+        if (!employee) {
+            return res.status(403).json({
+                error: 'You are not authorized to evaluate this employee. Only supervisors can evaluate their employees.'
+            });
+        }
         // Fetch performance stats for the employee
         const performanceStats = await PerformanceStats.findAll({
             where: {
@@ -123,8 +209,19 @@ exports.getEmployeeDetails = async (req, res) => {
 
 exports.getEmployeeSalary = async (req, res) => {
     const { employeeID } = req.params;
-  
+    const { employeeId } = req.user;
     try {
+       const employee = await Employee.findOne({
+            where: { EmployeeID: employeeID, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+            attributes: ['EmployeeID', 'Name', 'SupervisorID']
+       });
+
+        // If no such employee exists, deny access
+       if (!employee) {
+            return res.status(403).json({
+                error: 'You are not authorized to evaluate this employee. Only supervisors can evaluate their employees.'
+            });
+       }
       // Ensure employeeID is provided
       if (!employeeID) {
         return res.status(400).json({ message: 'Employee ID is required.' });
@@ -148,7 +245,7 @@ exports.getEmployeeSalary = async (req, res) => {
       }
   
       // Return only the salaryID associated with the employee
-      res.status(200).json({ salaryID });
+      res.status(200).json(currentSalary);
   
     } catch (error) {
       console.error('Error fetching employee salary:', error);
@@ -156,82 +253,66 @@ exports.getEmployeeSalary = async (req, res) => {
     }
   };
   
+
   
-exports.addSalary = async (req, res) => {
-    const { EmployeeID, BasicPay, Allowances = 0.00, Deductions = 0.00, Bonuses = 0.00, Date } = req.body;
-  
-    try {
-      const employee = await Employee.findByPk(EmployeeID);
-      if (!employee) {
-        return res.status(404).json({ message: 'Employee not found' });
-      }
-  
-      // Calculate Net Salary
-      const NetSalary = BasicPay + Allowances + Bonuses - Deductions;
-  
-      // Create a new salary record
-      const salary = await Salary.create({
-        EmployeeID,
-        BasicPay,
-        Allowances,
-        Deductions,
-        Bonuses,
-        NetSalary,
-        Date
-      });
-  
-      // Check if a record exists in current_salary for the employee
-      const currentSalaryRecord = await CurrentSalary.findOne({
-        where: { EmployeeID }
-      });
-  
-      if (currentSalaryRecord) {
-        // If a current salary record exists, update it with the new salaryID
-        currentSalaryRecord.SalaryID = salary.SalaryID;
-        await currentSalaryRecord.save();
-      } else {
-        // If no current salary record exists, create a new one
-        await CurrentSalary.create({
-          EmployeeID,
-          SalaryID: salary.SalaryID
-        });
-      }
-  
-      res.status(201).json(salary);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  };
-  
-exports.getSalaryRecords = async (req, res) => {
+  exports.getSalaryRecords = async (req, res) => {
     const { employeeID } = req.params;
-    
+    const { employeeId } = req.user; // Extract employeeID from request parameters
+
     try {
-      const salaryRecords = await Salary.findAll({
-        where: { EmployeeID: employeeID },
-      });
-      
-      if (salaryRecords.length === 0) {
-        return res.status(404).json({ message: 'No salary records found for this employee.' });
-      }
-      
-      return res.status(200).json(salaryRecords);
+        // Verify if the employee belongs to the supervisor (if applicable)
+        const employee = await Employee.findOne({
+            where: { EmployeeID: employeeID, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+            attributes: ['EmployeeID', 'Name', 'SupervisorID']
+       });
+
+        // If no such employee exists, deny access
+        if (!employee) {
+            return res.status(404).json({
+                error: 'Employee not found or you are not authorized to access this record.'
+            });
+        }
+
+        // Fetch salary records for the employee
+        const salaryRecords = await Salary.findAll({
+            where: { EmployeeID: employeeID }
+        });
+
+        // If no salary records exist, return a 404 response
+        if (salaryRecords.length === 0) {
+            return res.status(404).json({
+                message: 'No salary records found for this employee.'
+            });
+        }
+
+        // Return the salary records
+        return res.status(200).json(salaryRecords);
+
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Internal server error' });
+        console.error('Error fetching salary records:', error.message);
+
+        // Handle internal server errors
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: error.message
+        });
     }
-  };
+};
+
   
 
 exports.getPerformanceStats = async (req, res) => {
-    const employeeId = req.params.employeeId;
-
+    const employeeID = req.params.employeeId;
+    const { employeeId } = req.user;
     try {
+        const employee = await Employee.findOne({
+            where: { EmployeeID: employeeID, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+            attributes: ['EmployeeID', 'Name', 'SupervisorID']
+       });
         // Fetch performance stats for the given EmployeeID
         const performanceStats = await PerformanceStats.findAll({
             where: {
-                EmployeeID: employeeId  // Find records for the given EmployeeID
+                EmployeeID: employeeID  // Find records for the given EmployeeID
             },
             include: [
                 {
@@ -260,57 +341,16 @@ exports.getPerformanceStats = async (req, res) => {
     }
 };
 
-exports.addEmployee = async (req, res) => {
-    try {
-        const { Name, Department, ContactNo, Address, Email, RoleID, DateOfJoining } = req.body;
-
-        // Validate required fields
-        if (!Name || !Email || !RoleID) {
-            return res.status(400).json({ error: 'Name, Email, and RoleID are required.' });
-        }
-
-        // If DateOfJoining is not provided, set it to the current date
-        const joiningDate = DateOfJoining || new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
-
-        // Create new employee
-        const employee = await Employee.create({
-            Name,
-            Department,
-            ContactNo,
-            Address,
-            Email,
-            RoleID, // RoleID is used instead of Role
-            DateOfJoining: joiningDate, // Use the calculated or provided DateOfJoining
-        });
-
-        res.status(201).json({
-            message: 'Employee added successfully.',
-            employee,
-        });
-    } catch (error) {
-        if (error.name === 'SequelizeValidationError') {
-            return res.status(400).json({ error: 'Validation error: ' + error.errors.map(e => e.message).join(', ') });
-        }
-        console.error(error);
-        res.status(500).json({ error: 'Failed to add employee. Please try again later.' });
-    }
-};
-
-
-exports.getAllEmployees = async (req, res) => {
-    try {
-      const employees = await Employee.findAll();
-      res.status(200).json(employees);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch employees' });
-    }
-  };
   
   // Get an employee by ID
 exports.getEmployeeById = async (req, res) => {
     try {
       const { id } = req.params;
-      const employee = await Employee.findByPk(id);
+      const { employeeId } = req.user;
+      const employee = await Employee.findOne({
+        where: { EmployeeID: id, SupervisorID: employeeId }, // Match employeeId and SupervisorID
+        attributes: ['EmployeeID', 'Name', 'SupervisorID']
+      });
       if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
       }
@@ -320,3 +360,6 @@ exports.getEmployeeById = async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch employee' });
     }
   };
+
+
+  //supervisor details (for them)
