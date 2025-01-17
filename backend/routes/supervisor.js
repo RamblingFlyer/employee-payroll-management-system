@@ -25,7 +25,7 @@ router.get('/mydetails', EmpController.getEmployeeById);
 
 //getall,get single, post salary records
 router.get('/mypayrollhistory', EmpController.getSalaryRecords);
-router.get('/mysalary', EmpController.getEmployeeSalary);
+router.get('/sal/mysalary', EmpController.getEmployeeSalary);
 
 //getdetails
 router.get('/mystats',EmpController.getEmployeeDetails);

@@ -3,7 +3,7 @@ const PerformanceStats = require('../models/PerformanceStats');
 const CurrentSalaries = require('../models/CurrentSalary')
 const Salary = require('../models/Salary')
 const bcrypt = require('bcrypt');
-const Authentication = require('../models/Authentication');
+//const Authentication = require('../models/Authentication');
 // controllers/empController.js
 // Insert User Function
 const jwt = require('jsonwebtoken');
@@ -169,7 +169,7 @@ exports.getEvaluationsByEvaluator = async (req, res) => {
     }
 };
 
-exports.getEmployeeDetails = async (req, res) => {
+exports.getEmployeDetails = async (req, res) => {
     const { employeeID } = req.params;  // Extract employeeId from request params
     try {
         // Fetch performance stats for the employee
@@ -214,7 +214,7 @@ exports.getEmployeeDetails = async (req, res) => {
 };
 
 
-exports.getEmployeeSalary = async (req, res) => {
+exports.getEmployeSalary = async (req, res) => {
     const { employeeID } = req.params;
   
     try {
@@ -297,7 +297,7 @@ exports.addSalary = async (req, res) => {
     }
   };
   
-exports.getSalaryRecords = async (req, res) => {
+exports.getSlaryRecords = async (req, res) => {
     const { employeeID } = req.params;
     
     try {
@@ -317,7 +317,7 @@ exports.getSalaryRecords = async (req, res) => {
   };
   
 
-exports.getPerformanceStats = async (req, res) => {
+exports.getPerformancStats = async (req, res) => {
     const employeeID = req.params.employeeID;
 
     try {
@@ -401,12 +401,27 @@ exports.getAllEmployees = async (req, res) => {
   };
   
   // Get an employee by ID
-exports.getEmployeeById = async (req, res) => {
+exports.getEmployeById = async (req, res) => {
     try {
       const { id } = req.params;
       const employee = await Employee.findByPk(id);
       if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
+      }
+      res.status(200).json(employee);
+    } catch (error) {
+      console.error('Error fetching employee by ID:', error.message); 
+      res.status(500).json({ error: 'Failed to fetch employee' });
+    }
+  };
+
+  exports.getmydet = async (req, res) => {
+    try {
+      const { employeeId } = req.user;  // Directly use req.user.employeeId
+  
+      const employee = await Employee.findByPk(employeeId);  // Use employeeId here
+      if (!employee) {
+        return res.status(404).json({ error: 'Employee not found', employeeID: employeeId });
       }
       res.status(200).json(employee);
     } catch (error) {

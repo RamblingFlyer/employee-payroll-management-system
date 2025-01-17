@@ -11,19 +11,18 @@ router.post('/add',AdController.addEmployee); //works
 router.get('/', AdController.getAllEmployees); //works
 
 //evaluations
-router.get('/:id', AdController.getEmployeeById);//works
-router.get('/performance/:employeeID', AdController.getPerformanceStats);//works
+router.get('/emp/:id', AdController.getEmployeById);//works
+router.get('/performance/:employeeID', AdController.getPerformancStats);//works
 router.get('/evaluations/:evaluatorID',AdController.getEvaluationsByEvaluator)//works
 router.post('/evaluations/:evaluatorID', AdController.addEvaluation); //works
 
 //getall,get single, post salary records
-router.get('/payrollhis/:employeeID', AdController.getSalaryRecords);//works
+router.get('/payrollhis/:employeeID', AdController.getSlaryRecords);//works
 router.post('/salary', AdController.addSalary);//works
-router.get('/salary/:employeeID', AdController.getEmployeeSalary);//works
+router.get('/salary/:employeeID', AdController.getEmployeSalary);//works
 
 //getdetails
-router.get('/stats/:employeeID',AdController.getEmployeeDetails);//works
-
+router.get('/stats/:employeeID',AdController.getEmployeDetails);//works
 
 //ADMIN DETAILS
 router.get('/mydetails', EmpController.getEmployeeById);
